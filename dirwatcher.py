@@ -15,13 +15,31 @@ import logging
 import sys
 import signal
 import time
+import argparse
+import os
+
 
 __author__ = "Nikal Morgan"
 
 logger = logging.getLogger(__name__)
 
-
 exit_flag = False
+
+
+def watch_directory():
+    pass
+
+
+def scan_single_file():
+    pass
+
+
+def detect_added_files():
+    pass
+
+
+def detect_removed_files():
+    pass
 
 
 def signal_handler(sig_num, frame):
@@ -38,6 +56,10 @@ def signal_handler(sig_num, frame):
     logger.warn('Received ' + signal.Signals(sig_num).name)
     global exit_flag
     exit_flag = True
+
+
+def create_parser():
+    pass
 
 
 def main():
@@ -58,7 +80,6 @@ def main():
         except Exception as e:
             logger.exception(e)
             time.sleep(10)
-    
     logger.info("\nExiting.\n"
                 "Process ran for {} seconds".format(time.time() - start_time))
 
