@@ -2,7 +2,7 @@
 
 import unittest
 
-__author__ = 'madarp'
+__author__ = 'Nikal Morgan'
 
 
 class TestDirwatcher(unittest.TestCase):
