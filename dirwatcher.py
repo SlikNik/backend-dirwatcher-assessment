@@ -10,48 +10,67 @@ text was found; it will not be logged again unless it appears in the file as
 another subsequent line entry later on.
 """
 
-
 import logging
 import sys
 import signal
 import time
 import argparse
 import os
-
+import errno
 
 __author__ = "Nikal Morgan"
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
+files = {}
 exit_flag = False
 
 
-def magic_word_finder(dirname, magic_word, ext):
-    """Goes through each file of a given type in the given directory
-    and searches for given text."""
+def magic_word_finder(dirname, magic_word, start_line):
+    """Goes a file of a given type plus where to start and searches for given text."""
     pass
 
 
-def scan_single_file(f, magic_word):
-    """Checks each line of a given file and searches for a given string"""
-    pass
-
-
-def watch_directory(dirname):
+def watch_directory(args):
     """Watches given directory for added files and deleted files,
     if directory doesn't exist creates directory.
     """
-    pass
+    logger.info('Watching directory:{}, File Extension:{}, Polling Interval:{}'
+                ', Magic Text: {}'.format(args.directory, args.extension,
+                                          args.interval, args.magic_word)
+                )
+    while not os.path.isdir(args.directory):
+        # complain
+        pass
+    file_list = os.listdir(args.directory)
+    detect_added_files(file_list, args.extension)
+    detect_removed_files(file_list)
+    for f in files:
+        files[f] = magic_word_finder(
+            os.path.join(args.directory, f),
+            files[f],
+            args.magic_word
+        )
 
 
-def detect_added_files(dirname):
+def detect_added_files(file_list, ext):
     """Checks give directory if new file was added"""
-    pass
+    global files
+    for f in file_list:
+        if f.endswith(ext) and f not in files:
+            files[f] = 0
+            logger.info(f"{f} added to watchlist.")
+    return file_list
 
 
-def detect_removed_files(dirname):
+def detect_removed_files(file_list):
     """Checks give directory if a file was deleted"""
-    pass
+    global files
+    for f in list(files):
+        if f not in file_list:
+            logger.info(f"{f} removed from watchlist.")
+            del files[f]
+    return file_list
 
 
 def signal_handler(sig_num, frame):
@@ -88,33 +107,51 @@ def create_parser():
 
 def main(args):
     """Main function is declared as standalone, for testability"""
+    logging.basicConfig(
+        format='%(asctime)s.%(msecs)03d %(name)-12s'
+               '%(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d &%H:%M:%S'
+    )
+    logger.setLevel(logging.DEBUG)
+    start_time = time.time()
+    logger.info(
+        '\n'
+        '-------------------------------------------------\n'
+        '   Running {}\n'
+        '   Started on {}\n'
+        '-------------------------------------------------\n'
+        .format(__file__, start_time.isoformat())
+    )
     parser = create_parser()
     parsed_args = parser.parse_args(args)
+    polling_interval = int(float(parsed_args.interval))
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    logger.info(parsed_args)
-    logger.info("Starting Dirwatcher")
-    start_time = time.time()
-    polling_interval = parsed_args.interval
 
     while not exit_flag:
         try:
-            magic_word_finder(
-                parsed_args.directory,
-                parsed_args.magic_word,
-                parsed_args.extension,
-            )
+            watch_directory(args)
         except OSError as e:
-            logger.warning(e)
-            time.sleep(10)
+            if e.errno == errno.ENOENT:
+                logger.error(f"{args.path} directory not found")
+                time.sleep(2)
+            else:
+                logger.error(e)
         except Exception as e:
-            logger.exception(e)
-            time.sleep(10)
+            logger.error(f"UNHANDLED EXCEPTION:{e}")
         time.sleep(polling_interval)
 
-    logger.info("\nExiting.\n"
-                "Process ran for {} seconds".format(time.time() - start_time))
+    full_time = time.time() - start_time
+    logger.info(
+        '\n'
+        '-------------------------------------------------\n'
+        '   Stopped {}\n'
+        '   Uptime was {}\n'
+        '-------------------------------------------------\n'
+        .format(__file__, full_time.isoformat())
+    )
+    logging.shutdown()
 
     if __name__ == "__main__":
         """Runs the main loop until an interrupt like control+c are input."""
