@@ -26,19 +26,31 @@ logger = logging.getLogger(__name__)
 exit_flag = False
 
 
-def watch_directory():
+def magic_word_finder(dirname, magic_word, ext):
+    """Goes through each file of a given type in the given directory
+    and searches for given text."""
     pass
 
 
-def scan_single_file():
+def scan_single_file(f, magic_word):
+    """Checks each line of a given file and searches for a given string"""
     pass
 
 
-def detect_added_files():
+def watch_directory(dirname):
+    """Watches given directory for added files and deleted files,
+    if directory doesn't exist creates directory.
+    """
     pass
 
 
-def detect_removed_files():
+def detect_added_files(dirname):
+    """Checks give directory if new file was added"""
+    pass
+
+
+def detect_removed_files(dirname):
+    """Checks give directory if a file was deleted"""
     pass
 
 
@@ -59,30 +71,53 @@ def signal_handler(sig_num, frame):
 
 
 def create_parser():
-    pass
+    """Create an argument parser object"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('directory', help='directory to monitor')
+    parser.add_argument('magic_word', help='The magic word/words to watch for')
+    parser.add_argument('-i',
+                        '--interval',
+                        help='Sets the interval in seconds to check the '
+                             'directory for magic words',
+                        type=float,
+                        default=1.0)
+    parser.add_argument('-x', '--extension', help='Sets the type of file to '
+                                                  'watch for', default='.txt')
+    return parser
 
 
-def main():
+def main(args):
+    """Main function is declared as standalone, for testability"""
+    parser = create_parser()
+    parsed_args = parser.parse_args(args)
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    # Now my signal_handler will get called if OS sends
-    # either of these to my process.
+    logger.info(parsed_args)
+    logger.info("Starting Dirwatcher")
     start_time = time.time()
+    polling_interval = parsed_args.interval
 
     while not exit_flag:
         try:
-            # call my directory watching function
-            # put a sleep inside my while loop
-            # so I don't peg the cpu usage at 100%
-            time.sleep(polling_interval)
-            pass
+            magic_word_finder(
+                parsed_args.directory,
+                parsed_args.magic_word,
+                parsed_args.extension,
+            )
+        except OSError as e:
+            logger.warning(e)
+            time.sleep(10)
         except Exception as e:
             logger.exception(e)
             time.sleep(10)
+        time.sleep(polling_interval)
+
     logger.info("\nExiting.\n"
                 "Process ran for {} seconds".format(time.time() - start_time))
 
     if __name__ == "__main__":
         """Runs the main loop until an interrupt like control+c are input."""
+        logger.info("My Pid is {}".format(os.getpid()))
+        logger.info("Command line arguments: {}".format(sys.argv))
         main(sys.argv[1:])
