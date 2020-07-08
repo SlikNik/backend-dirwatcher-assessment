@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Thi program monitors a given directory for text files that are created within
@@ -11,6 +11,7 @@ another subsequent line entry later on.
 """
 
 import logging
+# import logging.handlers
 import sys
 import signal
 import time
@@ -20,41 +21,45 @@ import errno
 
 __author__ = "Nikal Morgan"
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 files = {}
 exit_flag = False
 
 
-def magic_word_finder(dirname, magic_word, start_line):
-    """Goes a file of a given type plus where to start and searches for given text."""
-    pass
+def magic_word_finder(path, start_line, magic_word):
+    """Goes a file of a given type plus where to start
+    and searches for given text."""
+    line_number = 0
+    with open(path) as f:
+        for line_number, line in enumerate(f):
+            if line_number >= start_line:
+                if magic_word in line:
+                    logger.info(f"Match found for {magic_word}"
+                                f"found on line {line_number+1} in {path}"
+                                )
+    return line_number + 1
 
 
 def watch_directory(args):
     """Watches given directory for added files and deleted files,
-    if directory doesn't exist creates directory.
+    calls another function to find magic word in files.
     """
-    logger.info('Watching directory:{}, File Extension:{}, Polling Interval:{}'
-                ', Magic Text: {}'.format(args.directory, args.extension,
-                                          args.interval, args.magic_word)
-                )
-    while not os.path.isdir(args.directory):
-        # complain
-        pass
     file_list = os.listdir(args.directory)
     detect_added_files(file_list, args.extension)
     detect_removed_files(file_list)
     for f in files:
+        path = os.path.join(args.directory, f)
         files[f] = magic_word_finder(
-            os.path.join(args.directory, f),
+            path,
             files[f],
             args.magic_word
         )
+    return files
 
 
 def detect_added_files(file_list, ext):
-    """Checks give directory if new file was added"""
+    """Checks the directory if a new file was added"""
     global files
     for f in file_list:
         if f.endswith(ext) and f not in files:
@@ -64,7 +69,7 @@ def detect_added_files(file_list, ext):
 
 
 def detect_removed_files(file_list):
-    """Checks give directory if a file was deleted"""
+    """Checks the directory if a given file was deleted"""
     global files
     for f in list(files):
         if f not in file_list:
@@ -84,14 +89,16 @@ def signal_handler(sig_num, frame):
     :return None
     """
     # log the associated signal name
-    logger.warn('Received ' + signal.Signals(sig_num).name)
+    logger.warning('Received ' + signal.Signals(sig_num).name)
     global exit_flag
     exit_flag = True
 
 
 def create_parser():
     """Create an argument parser object"""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Watches a directory of text files for a magic string"
+    )
     parser.add_argument('directory', help='directory to monitor')
     parser.add_argument('magic_word', help='The magic word/words to watch for')
     parser.add_argument('-i',
@@ -100,15 +107,20 @@ def create_parser():
                              'directory for magic words',
                         type=float,
                         default=1.0)
-    parser.add_argument('-x', '--extension', help='Sets the type of file to '
-                                                  'watch for', default='.txt')
+    parser.add_argument('-x', '--extension',
+                        help='Sets the type of file to watch for',
+                        type=str,
+                        default='.txt')
     return parser
 
 
 def main(args):
     """Main function is declared as standalone, for testability"""
+    parser = create_parser()
+    parsed_args = parser.parse_args(args)
+    polling_interval = parsed_args.interval
     logging.basicConfig(
-        format='%(asctime)s.%(msecs)03d %(name)-12s'
+        format='%(asctime)s.%(msecs)03d %(name)-12s '
                '%(levelname)-8s %(message)s',
         datefmt='%Y-%m-%d &%H:%M:%S'
     )
@@ -117,24 +129,28 @@ def main(args):
     logger.info(
         '\n'
         '-------------------------------------------------\n'
-        '   Running {}\n'
-        '   Started on {}\n'
+        f'   Running {__file__}\n'
+        f'   PID is {os.getpid()}\n'
+        f'   Started on {start_time:.1f}\n'
         '-------------------------------------------------\n'
-        .format(__file__, start_time.isoformat())
     )
-    parser = create_parser()
-    parsed_args = parser.parse_args(args)
-    polling_interval = int(float(parsed_args.interval))
+    logger.info(
+        f'Watching directory:{parsed_args.directory},'
+        f'File Extension:{parsed_args.extension},'
+        f'Polling Interval:{parsed_args.interval},'
+        f', Magic Text: {parsed_args.magic_word}'
+    )
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGUSR1, signal_handler)
 
     while not exit_flag:
         try:
-            watch_directory(args)
+            watch_directory(parsed_args)
         except OSError as e:
             if e.errno == errno.ENOENT:
-                logger.error(f"{args.path} directory not found")
+                logger.error(f"{parsed_args.directory} directory not found")
                 time.sleep(2)
             else:
                 logger.error(e)
@@ -146,15 +162,13 @@ def main(args):
     logger.info(
         '\n'
         '-------------------------------------------------\n'
-        '   Stopped {}\n'
-        '   Uptime was {}\n'
+        f'   Stopped {__file__}\n'
+        f'   Uptime was {full_time:.1f}\n'
         '-------------------------------------------------\n'
-        .format(__file__, full_time.isoformat())
     )
     logging.shutdown()
 
-    if __name__ == "__main__":
-        """Runs the main loop until an interrupt like control+c are input."""
-        logger.info("My Pid is {}".format(os.getpid()))
-        logger.info("Command line arguments: {}".format(sys.argv))
-        main(sys.argv[1:])
+
+if __name__ == "__main__":
+    """Runs the main loop until an interrupt like control+c are input."""
+    main(sys.argv[1:])
