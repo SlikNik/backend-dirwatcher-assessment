@@ -143,8 +143,9 @@ def main(args):
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGHUP, signal_handler)
     signal.signal(signal.SIGUSR1, signal_handler)
-
+    signal.signal(signal.SIGUSR2, signal_handler)
     while not exit_flag:
         try:
             watch_directory(parsed_args)
