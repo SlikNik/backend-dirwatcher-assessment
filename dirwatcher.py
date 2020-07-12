@@ -35,8 +35,9 @@ def magic_word_finder(path, start_line, magic_word):
         for line_number, line in enumerate(f):
             if line_number >= start_line:
                 if magic_word in line:
-                    logger.info(f"Match found for {magic_word}"
-                                f"found on line {line_number+1} in {path}"
+                    logger.info(
+                        f"Match found for {magic_word} "
+                        f"found on line {line_number+1} in {path}"
                                 )
     return line_number + 1
 
@@ -135,9 +136,9 @@ def main(args):
         '-------------------------------------------------\n'
     )
     logger.info(
-        f'Watching directory:{parsed_args.directory},'
-        f'File Extension:{parsed_args.extension},'
-        f'Polling Interval:{parsed_args.interval},'
+        f'Watching directory:{parsed_args.directory}, '
+        f'File Extension:{parsed_args.extension}, '
+        f'Polling Interval:{parsed_args.interval}, '
         f', Magic Text: {parsed_args.magic_word}'
     )
     # Hook into these two signals from the OS
