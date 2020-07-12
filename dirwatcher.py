@@ -139,7 +139,7 @@ def main(args):
         f'Watching directory:{parsed_args.directory}, '
         f'File Extension:{parsed_args.extension}, '
         f'Polling Interval:{parsed_args.interval}, '
-        f', Magic Text: {parsed_args.magic_word}'
+        f'Magic Text: {parsed_args.magic_word}'
     )
     # Hook into these two signals from the OS
     signal.signal(signal.SIGINT, signal_handler)
